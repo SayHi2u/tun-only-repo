@@ -65,12 +65,14 @@ while IFS= read -r pkg; do
     \#*) continue ;;
   esac
 
-  # 优先取所有用户/工作资料下的 UID；失败则退回当前用户
+  # 优先取所有用户/工作资料下的 UID；失败则退回当前用户。
+  # 某些 ROM 对多用户/工作资料会输出 uid:10188,1010188 这种逗号分隔格式，
+  # 必须拆成两个 UID，否则 iptables 会把整串当成一个非法 UID。
   UIDS=$(/system/bin/cmd package list packages -U --user all 2>/dev/null \
-    | awk -v p="package:${pkg}" '$1 == p { sub(/^uid:/, "", $2); print $2 }')
+    | awk -v p="package:${pkg}" '$1 == p { sub(/^uid:/, "", $2); gsub(/,/, " ", $2); print $2 }')
   if [ -z "$UIDS" ]; then
     UIDS=$(/system/bin/cmd package list packages -U 2>/dev/null \
-      | awk -v p="package:${pkg}" '$1 == p { sub(/^uid:/, "", $2); print $2 }')
+      | awk -v p="package:${pkg}" '$1 == p { sub(/^uid:/, "", $2); gsub(/,/, " ", $2); print $2 }')
   fi
 
   if [ -z "$UIDS" ]; then
@@ -86,13 +88,17 @@ while IFS= read -r pkg; do
 
     # 先清掉这个 UID 的旧引用，避免重复规则导致计数不一致
     while iptables -D OUTPUT -m owner --uid-owner "$uid" -j "$CHAIN4" 2>/dev/null; do :; done
-    iptables -I OUTPUT 1 -m owner --uid-owner "$uid" -j "$CHAIN4"
-    if command -v ip6tables >/dev/null 2>&1; then
-      while ip6tables -D OUTPUT -m owner --uid-owner "$uid" -j "$CHAIN6" 2>/dev/null; do :; done
-      ip6tables -I OUTPUT 1 -m owner --uid-owner "$uid" -j "$CHAIN6"
+    if iptables -I OUTPUT 1 -m owner --uid-owner "$uid" -j "$CHAIN4"; then
+      if command -v ip6tables >/dev/null 2>&1; then
+        while ip6tables -D OUTPUT -m owner --uid-owner "$uid" -j "$CHAIN6" 2>/dev/null; do :; done
+        ip6tables -I OUTPUT 1 -m owner --uid-owner "$uid" -j "$CHAIN6" \
+          || log "WARN: ip6tables failed for uid=$uid"
+      fi
+      NEW="$NEW $uid"
+      log "applied: pkg=$pkg uid=$uid iface=$TUN_IF"
+    else
+      log "ERROR: iptables failed for pkg=$pkg uid=$uid"
     fi
-    NEW="$NEW $uid"
-    log "applied: pkg=$pkg uid=$uid iface=$TUN_IF"
   done
 done < "$CONF"
 

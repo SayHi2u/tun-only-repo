@@ -95,6 +95,7 @@ WebUI 通过 KernelSU 的 `ksu.exec` 以 root 执行命令；不需要额外给�
 - **UID x/y**：`x` 是 `iptables -S OUTPUT` 中实际找到的 UID 引用数，`y` 是 `uids.state` 里记录的 UID 数。
   - `2/2`：两个 UID 都有规则，正常。
   - `1/2`：state 里有 2 个 UID，但只有 1 个 UID 有 OUTPUT 引用。可能是旧 UID 残留、第二条规则添加失败，或 state 里包含重复/旧数据。点“重新应用规则”会先清理再按包名重建；如果仍不一致，看 `apply.log`。
+  - **`5/6` 且缺少规则里出现 `10188,1010188` 这种逗号值**：这是多用户/工作资料的 UID 格式问题，不是模块没拿到 UID。`cmd package list packages -U --user all` 对同一个包跨用户时会输出 `uid:10188,1010188`，旧版 `apply.sh` 把整串当成一个 UID 传给 iptables，iptables 无法识别，所以只添加了 5 条。1.9 起会按逗号拆成两个 UID，分别添加；重新应用后应变成 `7/7`（一个包对应两个 UID，UID 数大于包名数是正常的）。
 - **生效 UID 2 个、包名 1 个**：一个包名对应两个 UID 是正常的，常见于多用户、工作资料、应用双开；`apply.sh` 使用 `--user all` 会覆盖这些 UID。也可能是重装 app 后旧 UID 残留；新版 `apply.sh` 会去重并在每次应用前清掉同一 UID 的旧引用。
 - **勾选后退出 WebUI 又变回未勾选**：勾选只是页面内的临时状态，必须点 **“保存并应用”** 才会写入 `packages.conf`。页面现在会在有未保存修改时显示提示。
   - 如果点了保存仍然丢失，检查“验证规则”里的 `packages.conf` 内容；为空说明写入失败。也可以手动执行：
@@ -142,7 +143,7 @@ su -c 'tail -n 30 /data/adb/modules/tun-only-ksu/apply.log'
 - **卸载重装**：UID 通常会变。`service.sh` 启动的 `inotifyd` 会监听 `/data/system/packages.xml`，安装完成后自动重跑 `apply.sh`。
   - 如果 `inotifyd` 或该路径在你的 ROM 上不可用，模块不会启动轮询；重装后点“重新应用规则”或重启。
   - 如果“验证规则”里显示“包变化监听: 未运行”，重装后重启，或在 WebUI 里点“重新应用规则”。
-- **多用户/工作资料/双开**：`apply.sh` 优先使用 `cmd package list packages -U --user all`，覆盖同一包名的多个 UID。
+- **多用户/工作资料/双开**：`apply.sh` 优先使用 `cmd package list packages -U --user all`，覆盖同一包名的多个 UID。某些 ROM 会输出 `uid:10188,1010188` 这种逗号分隔格式；1.9 起会拆成两个 UID 分别添加规则。
 - **卸载模块**：KernelSU 管理器卸载后重启；`uninstall.sh` 会尽量清理规则。
 
 ## 需不需要给 app 持久化 root

@@ -632,7 +632,7 @@ function refreshStatus() {
   const conf = readConfig();
 
   const stateUids = Array.from(new Set(
-    stateRaw.trim().split(/\s+/).filter(Boolean)
+    stateRaw.trim().split(/[\s,]+/).filter(Boolean)
   ));
 
   const refUids = [];
