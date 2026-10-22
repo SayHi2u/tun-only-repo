@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tun Only</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-text: #ffffff;
+      --ok: #16a34a;
+      --bad: #dc2626;
+      --input: #ffffff;
+      --pre: #0f172a;
+      --pre-text: #e2e8f0;
+      --secondary: #eef2ff;
+      --secondary-text: #1e3a8a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --card: #1a1d23;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: #2a2f3a;
+        --accent: #60a5fa;
+        --accent-text: #0b1220;
+        --ok: #4ade80;
+        --bad: #f87171;
+        --input: #11141a;
+        --pre: #0b0e14;
+        --pre-text: #d1d5db;
+        --secondary: #1e293b;
+        --secondary-text: #bfdbfe;
+      }
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 18px 14px 40px; }
+    header { margin: 6px 2px 16px; }
+    h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: .2px; }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 12px 0;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .badge {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: transparent;
+    }
+    .badge.ok { color: var(--ok); border-color: var(--ok); }
+    .badge.bad { color: var(--bad); border-color: var(--bad); }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .row > input { flex: 1; min-width: 0; }
+    input[type="search"], textarea {
+      width: 100%;
+      background: var(--input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    input[type="search"]:focus, textarea:focus { border-color: var(--accent); }
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 600;
+      background: var(--accent);
+      color: var(--accent-text);
+      cursor: pointer;
+    }
+    button.secondary {
+      background: var(--secondary);
+      color: var(--secondary-text);
+      border-color: var(--border);
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    .app-list {
+      max-height: 48vh;
+      overflow: auto;
+      margin: 12px 0 4px;
+      border-top: 1px solid var(--border);
+    }
+    .selected-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+    .selected-bar .empty { color: var(--muted); font-size: 12px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 999px;
+      background: var(--secondary); color: var(--secondary-text);
+      font-size: 12px;
+    }
+    .chip button {
+      background: transparent; border: none; color: inherit;
+      padding: 0; font-size: 15px; line-height: 1; cursor: pointer;
+    }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 14px 18px; margin: 8px 0 0; }
+    .pin-row {
+      display: flex; align-items: center; gap: 8px;
+      margin: 0; font-size: 13px; color: var(--muted);
+    }
+    .pin-row input { accent-color: var(--accent); }
+    .app-row.pinned .app-name { color: var(--accent); }
+    .app-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 2px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .app-row:last-child { border-bottom: none; }
+    .app-row input[type="checkbox"] {
+      width: 20px; height: 20px; flex: 0 0 auto;
+      accent-color: var(--accent);
+    }
+    .app-meta { min-width: 0; }
+    .app-name {
+      display: flex; align-items: center; gap: 6px;
+      min-width: 0; font-size: 14px; font-weight: 600;
+    }
+    .app-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag {
+      display: inline-block; margin-left: 0; padding: 1px 6px;
+      border-radius: 999px; font-size: 11px; font-weight: 500;
+      background: var(--secondary); color: var(--secondary-text);
+      vertical-align: middle; flex: 0 0 auto;
+    }
+    .app-pkg { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+    textarea { resize: vertical; min-height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+    .actions #save { grid-column: 1 / -1; }
+    pre {
+      background: var(--pre);
+      color: var(--pre-text);
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      max-height: 52vh;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin: 8px 0 0;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin: 14px 2px; }
+    #busy { margin-left: auto; }
+    #copyOutput { margin-left: 8px; padding: 6px 10px; font-size: 12px; }
+    @media (max-width: 420px) {
+      .actions { grid-template-columns: 1fr; }
+      .actions #save { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tun Only 防火墙</h1>
+    <div class="muted">让选中的应用只从 v2rayNG 的 tun0 出站；物理网卡、移动数据和其他 tun 接口一律拒绝。</div>
+  </header>
+
+  <section class="card">
+    <div class="badges">
+      <span class="badge" id="badgeTun">tun0: 检查中</span>
+      <span class="badge" id="badgeChain">规则链: 检查中</span>
+      <span class="badge" id="badgeUids">UID: -</span>
+      <span class="badge" id="badgePkgs">包名: -</span>
+    </div>
+    <div class="muted" id="statusDetail">正在读取状态...</div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <input id="search" type="search" placeholder="搜索应用名或包名">
+      <button id="refresh" class="secondary" type="button">刷新</button>
+    </div>
+    <div class="muted" style="margin-top:8px">勾选需要强制走 tun0 的应用；勾选后会自动置顶。</div>
+    <div id="selectedBar" class="selected-bar"></div>
+    <div class="toggle-row">
+      <label class="pin-row"><input type="checkbox" id="pinSelected" checked> 勾选的应用置顶</label>
+      <label class="pin-row"><input type="checkbox" id="showSystem"> 显示系统应用</label>
+    </div>
+    <div id="systemHint" class="muted" style="display:none; margin-top:6px">
+      系统应用可能共享 UID；勾选一个系统应用可能同时影响同 UID 的其他系统组件（包括 android / system_server），
+      可能导致系统 UI、网络、无线调试异常。只在明确知道后果时使用。
+    </div>
+    <div id="appList" class="app-list"></div>
+    <div id="dirtyHint" class="muted" style="margin-top:8px"></div>
+    <details>
+      <summary>手动输入包名（每行一个，适用于未列出的应用）</summary>
+      <textarea id="manual" rows="4" placeholder="com.example.app"></textarea>
+    </details>
+  </section>
+
+  <div class="actions">
+    <button id="save" type="button">保存并应用</button>
+    <button id="reapply" class="secondary" type="button">重新应用规则</button>
+    <button id="verify" class="secondary" type="button">验证规则</button>
+  </div>
+
+  <section class="card">
+    <div class="row">
+      <strong>验证 / 执行输出</strong>
+      <span id="busy" class="muted"></span>
+      <button id="copyOutput" class="secondary" type="button">复制</button>
+    </div>
+    <pre id="output">尚未执行。</pre>
+  </section>
+
+  <p class="hint">
+    tun0 是 v2rayNG 开启后新增的接口；tun1 在关闭 v2rayNG 时仍存在，不是 v2rayNG 的接口，规则只允许 tun0。
+    目标应用必须在 v2rayNG 分应用代理中实际走 VPN，否则会被规则断网。保存配置后会自动重跑 apply.sh，不需要重启手机。
+  </p>
+</div>
+
+<script>
+'use strict';
+
+const PKG_RE = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/;
+let moduleDir = '/data/adb/modules/tun-only-ksu';
+let configured = [];
+let selected = new Set();
+let apps = [];
+let busy = false;
+let pinSelected = true;
+let showSystem = false;
+let systemLoaded = false;
+let renderTimer = null;
+
+function hasKsu() {
+  return typeof ksu !== 'undefined' && ksu && typeof ksu.exec === 'function';
+}
+
+function sh(cmd) {
+  try {
+    return ksu.exec(cmd) || '';
+  } catch (e) {
+    return 'ERROR: ' + e;
+  }
+}
+
+// KernelSU 的 ksu.exec 对多行 stdout 不可靠：可能只保留最后一行。
+// 所有需要完整多行的命令都先用 tr 把换行转成 |，读回后由 JS 拆分。
+function shLines(cmd) {
+  const raw = sh("(" + cmd + ") 2>&1 | tr '\\n' '|'");
+  return raw.split('|')
+    .map(function (s) { return s.replace(/\r/g, ''); })
+    .filter(function (s) { return s.trim().length > 0; });
+}
+
+function toast(msg) {
+  try { if (ksu && typeof ksu.toast === 'function') ksu.toast(msg); } catch (e) {}
+}
+
+function setOutput(text) {
+  document.getElementById('output').textContent = text;
+}
+
+function setBadge(id, text, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'badge ' + (ok ? 'ok' : 'bad');
+}
+
+function setBusy(value, msg) {
+  busy = value;
+  ['save', 'reapply', 'verify', 'refresh'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = value;
+  });
+  const el = document.getElementById('busy');
+  if (el) el.textContent = value ? (msg || '执行中...') : '';
+}
+
+function readConfig() {
+  // ksu.exec 的 fastCmd 对多行 stdout 不可靠（可能只保留一行）。
+  // 用 tr 把换行换成 |，让读回内容始终是一行，JS 再拆开。
+  const raw = sh("tr '\\n' '|' < '" + moduleDir + "/packages.conf' 2>/dev/null");
+  return raw.split('|')
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s && s.charAt(0) !== '#' && PKG_RE.test(s); });
+}
+
+function getTunIf() {
+  const raw = sh("cat '" + moduleDir + "/config.conf' 2>/dev/null");
+  const match = raw.match(/^\s*TUN_IF\s*=\s*([A-Za-z0-9_.-]+)/m);
+  return match ? match[1] : 'tun0';
+}
+
+function markDirty() {
+  const el = document.getElementById('dirtyHint');
+  if (el) el.textContent = '有未保存修改：勾选或修改包名后，必须点“保存并应用”，否则退出 WebUI 后会丢失。';
+}
+
+function clearDirty() {
+  const el = document.getElementById('dirtyHint');
+  if (el) el.textContent = '';
+}
+
+function parseManual() {
+  const el = document.getElementById('manual');
+  if (!el) return [];
+  return el.value.split(/[\s,;]+/)
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean);
+}
+
+function renderApps() {
+  const list = document.getElementById('appList');
+  list.textContent = '';
+
+  if (!apps.length) {
+    const empty = document.createElement('div');
+    empty.className = 'muted';
+    empty.style.padding = '14px 2px';
+    empty.textContent = '未读取到应用列表。请手动输入包名，或确认 KernelSU 管理器支持 listPackages API。';
+    list.appendChild(empty);
+    renderSelectedBar();
+    return;
+  }
+
+  // 默认隐藏未选中的系统应用；已选中的系统应用始终显示，方便取消勾选。
+  const visible = apps.filter(function (app) {
+    return showSystem || !app.isSystem || selected.has(app.packageName);
+  });
+
+  if (!visible.length) {
+    const empty = document.createElement('div');
+    empty.className = 'muted';
+    empty.style.padding = '14px 2px';
+    empty.textContent = showSystem ? '没有匹配的应用。' : '没有可显示的用户应用；可以打开“显示系统应用”或手动输入包名。';
+    list.appendChild(empty);
+    renderSelectedBar();
+    return;
+  }
+
+  const sorted = visible.slice().sort(function (a, b) {
+    if (pinSelected) {
+      const pa = selected.has(a.packageName) ? 0 : 1;
+      const pb = selected.has(b.packageName) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+    }
+    return String(a.appLabel || a.packageName).localeCompare(String(b.appLabel || b.packageName), 'zh');
+  });
+
+  sorted.forEach(function (app) {
+    const pkg = app.packageName;
+    const label = app.appLabel || pkg;
+    const isPinned = selected.has(pkg);
+    const row = document.createElement('label');
+    row.className = 'app-row' + (isPinned ? ' pinned' : '');
+    row.dataset.search = (label + ' ' + pkg + (app.isSystem ? ' 系统 system' : '')).toLowerCase();
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.pkg = pkg;
+    cb.checked = isPinned;
+
+    const meta = document.createElement('div');
+    meta.className = 'app-meta';
+
+    const name = document.createElement('div');
+    name.className = 'app-name';
+    const nameText = document.createElement('span');
+    nameText.className = 'app-name-text';
+    nameText.textContent = label;
+    name.appendChild(nameText);
+    if (app.isSystem) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = '系统';
+      name.appendChild(tag);
+    }
+
+    const pkgLine = document.createElement('div');
+    pkgLine.className = 'app-pkg';
+    pkgLine.textContent = pkg + (app.uid != null ? ' · UID ' + app.uid : '');
+
+    meta.appendChild(name);
+    meta.appendChild(pkgLine);
+    row.appendChild(cb);
+    row.appendChild(meta);
+    list.appendChild(row);
+  });
+
+  renderSelectedBar();
+  applySearchFilter();
+}
+
+function applySearchFilter() {
+  const el = document.getElementById('search');
+  const q = el ? el.value.trim().toLowerCase() : '';
+  document.querySelectorAll('#appList .app-row').forEach(function (row) {
+    row.style.display = (!q || row.dataset.search.indexOf(q) >= 0) ? '' : 'none';
+  });
+}
+
+function currentSelected() {
+  const set = new Set();
+  document.querySelectorAll('#appList input[data-pkg]:checked').forEach(function (cb) {
+    set.add(cb.dataset.pkg);
+  });
+  parseManual().forEach(function (p) { set.add(p); });
+  return set;
+}
+
+function renderSelectedBar() {
+  const bar = document.getElementById('selectedBar');
+  if (!bar) return;
+  bar.textContent = '';
+
+  if (!selected.size) {
+    const empty = document.createElement('span');
+    empty.className = 'empty';
+    empty.textContent = '尚未勾选应用';
+    bar.appendChild(empty);
+    return;
+  }
+
+  Array.from(selected).sort().forEach(function (pkg) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+
+    const text = document.createElement('span');
+    text.textContent = pkg;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '×';
+    btn.title = '取消勾选 ' + pkg;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      removePkg(pkg);
+    });
+
+    chip.appendChild(text);
+    chip.appendChild(btn);
+    bar.appendChild(chip);
+  });
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(function () {
+    const list = document.getElementById('appList');
+    const y = list ? list.scrollTop : 0;
+    renderApps();
+    if (list) list.scrollTop = y;
+  }, 700);
+}
+
+function removePkg(pkg) {
+  const manual = document.getElementById('manual');
+  if (manual) {
+    manual.value = parseManual().filter(function (p) { return p !== pkg; }).join('\n');
+  }
+  document.querySelectorAll('#appList input[data-pkg]').forEach(function (cb) {
+    if (cb.dataset.pkg === pkg) cb.checked = false;
+  });
+
+  selected = currentSelected();
+  renderApps();
+  markDirty();
+}
+
+function onAppListChange(e) {
+  if (!e.target || !e.target.dataset || !e.target.dataset.pkg) return;
+  selected = currentSelected();
+  markDirty();
+  renderSelectedBar();
+  scheduleRender();
+}
+
+function onManualInput() {
+  selected = currentSelected();
+  markDirty();
+  renderSelectedBar();
+  scheduleRender();
+}
+
+function onPinChange(e) {
+  pinSelected = !!e.target.checked;
+  try { localStorage.setItem('pinSelected', pinSelected ? '1' : '0'); } catch (err) {}
+  renderApps();
+}
+
+function onSystemChange(e) {
+  showSystem = !!e.target.checked;
+  try { localStorage.setItem('showSystem', showSystem ? '1' : '0'); } catch (err) {}
+
+  const hint = document.getElementById('systemHint');
+  if (hint) hint.style.display = showSystem ? '' : 'none';
+
+  if (showSystem && !systemLoaded) {
+    loadApps(true);
+  } else {
+    renderApps();
+  }
+}
+
+function updateManual() {
+  const installed = {};
+  apps.forEach(function (a) { installed[a.packageName] = true; });
+  const extra = configured.filter(function (p) { return !installed[p]; });
+  const el = document.getElementById('manual');
+  if (el) el.value = extra.join('\n');
+}
+
+function collectSelected() {
+  const set = new Set();
+  document.querySelectorAll('#appList input[data-pkg]:checked').forEach(function (cb) {
+    set.add(cb.dataset.pkg);
+  });
+  parseManual().forEach(function (p) { set.add(p); });
+  return Array.from(set);
+}
+
+function listPackagesSafe(type) {
+  try {
+    const raw = ksu.listPackages(type);
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function loadApps(includeSystem) {
+  setBusy(true, includeSystem ? '加载应用列表（含系统应用）...' : '加载应用列表...');
+  setTimeout(function () {
+    const userPkgs = listPackagesSafe('user');
+    let sysPkgs = includeSystem ? listPackagesSafe('system') : [];
+
+    // 旧版 KernelSU 可能没有 system 类型；用 all 减去 user 作为 fallback。
+    if (includeSystem && !sysPkgs.length) {
+      const allPkgs = listPackagesSafe('all');
+      sysPkgs = allPkgs.filter(function (p) { return userPkgs.indexOf(p) < 0; });
+    }
+
+    const packageNames = Array.from(new Set(userPkgs.concat(sysPkgs)));
+    let infos = [];
+    if (packageNames.length) {
+      try {
+        const raw = ksu.getPackagesInfo(JSON.stringify(packageNames));
+        infos = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      } catch (e) {
+        infos = [];
+      }
+    }
+    if (!infos || !infos.length) {
+      infos = packageNames.map(function (p) {
+        return { packageName: p, appLabel: p, uid: null };
+      });
+    }
+
+    const systemSet = new Set(sysPkgs);
+    apps = infos
+      .filter(function (x) { return x && x.packageName; })
+      .map(function (x) {
+        return {
+          packageName: x.packageName,
+          appLabel: x.appLabel || x.packageName,
+          uid: x.uid != null ? x.uid : null,
+          // 只有这次确实加载了系统列表时才标记；用户列表里的应用一律留在用户列表。
+          isSystem: includeSystem && (x.isSystem === true || systemSet.has(x.packageName))
+        };
+      })
+      .sort(function (a, b) {
+        return String(a.appLabel || a.packageName).localeCompare(String(b.appLabel || b.packageName), 'zh');
+      });
+
+    if (includeSystem) systemLoaded = true;
+
+    renderApps();
+    updateManual();
+    renderSelectedBar();
+    setBusy(false);
+  }, 40);
+}
+
+function writeConfig(list) {
+  // 不用 heredoc：ksu.exec 对多行命令/多行输出不可靠，多包时只保留一行。
+  // 把包名用 | 拼成单行，printf 写入时再 tr 成换行；读回时 tr 回 |，始终单行。
+  const joined = list.join('|') + (list.length ? '|' : '');
+  const writeCmd = "printf '%s' '" + joined + "' | tr '|' '\\n' > '" +
+    moduleDir + "/packages.conf'";
+  const readCmd = "tr '\\n' '|' < '" + moduleDir + "/packages.conf' 2>/dev/null";
+
+  sh(writeCmd);
+  const out = sh(readCmd);
+  return {
+    ok: out.replace(/\r/g, '').trim() === joined,
+    out: out
+  };
+}
+
+function refreshStatus() {
+  const tunIf = getTunIf();
+  const tunLines = shLines("ip -o link show " + tunIf);
+  const chainLines = shLines("iptables -S TUN_ONLY_APPS");
+  const refLines = shLines("iptables -S OUTPUT | grep TUN_ONLY_APPS");
+  const stateRaw = sh("cat '" + moduleDir + "/uids.state' 2>/dev/null");
+  const conf = readConfig();
+
+  const stateUids = Array.from(new Set(
+    stateRaw.trim().split(/\s+/).filter(Boolean)
+  ));
+
+  const refUids = [];
+  refLines.forEach(function (line) {
+    const m = line.match(/--uid-owner\s+(\d+)/);
+    if (m) refUids.push(m[1]);
+  });
+  const uniqueRefs = Array.from(new Set(refUids));
+  const missing = stateUids.filter(function (uid) { return uniqueRefs.indexOf(uid) < 0; });
+  const extra = uniqueRefs.filter(function (uid) { return stateUids.indexOf(uid) < 0; });
+
+  const tunText = tunLines.join(' ');
+  const tunOk = tunText.indexOf(tunIf) >= 0 && tunText.indexOf('does not exist') < 0;
+  const chainExists = chainLines.some(function (l) {
+    return l.indexOf('-N TUN_ONLY_APPS') >= 0 || l.indexOf('-A TUN_ONLY_APPS') >= 0;
+  });
+  const tunRule = chainLines.some(function (l) {
+    return l.indexOf('-o ' + tunIf + ' -j ACCEPT') >= 0;
+  });
+  const rejectRule = chainLines.some(function (l) {
+    return l.indexOf('-j REJECT') >= 0;
+  });
+  const chainOk = chainExists && tunRule && rejectRule;
+  const uidOk = stateUids.length > 0 && missing.length === 0 && extra.length === 0;
+
+  setBadge('badgeTun', tunOk ? tunIf + ' 已连接' : tunIf + ' 不存在', tunOk);
+  setBadge('badgeChain', chainOk ? '规则链正常' : (chainExists ? '规则不完整' : '规则链不存在'), chainOk);
+  setBadge('badgeUids', 'UID ' + uniqueRefs.length + '/' + stateUids.length, uidOk);
+  setBadge('badgePkgs', '包名 ' + conf.length, conf.length > 0);
+
+  let detail = 'TUN_IF=' + tunIf + ' · ' +
+    (chainOk ? '规则: lo + ' + tunIf + ' 放行，其余 REJECT' : '规则链缺失或不完整') +
+    ' · state UID: ' + (stateUids.join(' ') || '无') +
+    ' · OUTPUT 引用: ' + (uniqueRefs.join(' ') || '无') +
+    ' · 配置包名: ' + (conf.join(', ') || '无');
+  if (missing.length) detail += ' · 缺少规则: ' + missing.join(' ');
+  if (extra.length) detail += ' · 多余规则: ' + extra.join(' ');
+  if (!chainExists) detail += ' · 点“重新应用规则”或查看 apply.log';
+  document.getElementById('statusDetail').textContent = detail;
+}
+
+function saveAndApply() {
+  if (busy) return;
+  const manual = parseManual();
+  const bad = manual.filter(function (p) { return !PKG_RE.test(p); });
+  if (bad.length) {
+    alert('以下包名格式不正确：\n' + bad.join('\n'));
+    return;
+  }
+
+  const all = collectSelected();
+  if (!all.length && !confirm('配置为空：保存后会清除所有应用规则。继续？')) {
+    return;
+  }
+
+  setBusy(true, '保存中...');
+  setOutput('正在写入 packages.conf 并执行 apply.sh...\n');
+  setTimeout(function () {
+    const res = writeConfig(all);
+    if (!res.ok) {
+      const pretty = (res.out || '').split('|').filter(Boolean).join('\n');
+      setOutput('保存失败：packages.conf 写入后读回不一致。\n\n读回内容:\n' + (pretty || '(空)') +
+        '\n\n如果读回内容与你要保存的包名一致，说明文件其实已经写入，只是校验误报；' +
+        '可以点“重新应用规则”让当前文件生效。\n' +
+        '否则请检查模块目录权限，或到 Termux 手动执行：\n' +
+        'su -c "cat > ' + moduleDir + '/packages.conf"');
+      setBusy(false);
+      toast('保存失败');
+      return;
+    }
+
+    const applyOut = sh("sh '" + moduleDir + "/apply.sh' 2>&1");
+    configured = all;
+    selected = new Set(all);
+    renderApps();
+    updateManual();
+    renderSelectedBar();
+    clearDirty();
+    setOutput(
+      '已保存包名:\n' + (all.join('\n') || '(空)') + '\n\n' +
+      'apply.sh 输出:\n' + (applyOut || '(无)')
+    );
+    refreshStatus();
+    setBusy(false);
+    toast('已保存并应用');
+  }, 50);
+}
+
+function applyOnly() {
+  if (busy) return;
+  setBusy(true, '应用中...');
+  setTimeout(function () {
+    const out = sh("sh '" + moduleDir + "/apply.sh' 2>&1");
+    setOutput('apply.sh 输出:\n' + (out || '(无)'));
+    refreshStatus();
+    setBusy(false);
+    toast('规则已重新应用');
+  }, 50);
+}
+
+function verify() {
+  if (busy) return;
+  setBusy(true, '验证中...');
+  setTimeout(function () {
+    const cmds = [
+      ['TUN_IF 配置', "grep '^TUN_IF=' '" + moduleDir + "/config.conf'"],
+      ['tun0 接口', "ip -o link show tun0 || echo 'tun0 不存在'"],
+      ['IPv4 链', 'iptables -S TUN_ONLY_APPS'],
+      ['IPv4 OUTPUT 引用', "iptables -S OUTPUT | grep TUN_ONLY_APPS || echo '无引用'"],
+      ['IPv6 链', "ip6tables -S TUN_ONLY_APPS6 || echo 'ip6tables 不可用'"],
+      ['生效 UID', "cat '" + moduleDir + "/uids.state'"],
+      ['packages.conf', "cat '" + moduleDir + "/packages.conf'"],
+      ['包变化监听', "ps -A | grep inotifyd | grep -v grep || echo '未运行（不会轮询）'"],
+      ['最近日志', "tail -n 30 '" + moduleDir + "/apply.log'"]
+    ];
+    let out = '';
+    cmds.forEach(function (item) {
+      const lines = shLines(item[1]);
+      out += '### ' + item[0] + '\n' + (lines.join('\n') || '(空)') + '\n\n';
+    });
+    setOutput(out);
+    refreshStatus();
+    setBusy(false);
+  }, 50);
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').textContent || '';
+  if (!text.trim()) {
+    toast('没有可复制的内容');
+    return;
+  }
+
+  // 优先用 execCommand：KernelSU WebView 里剪贴板 API 不一定可用。
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch (e) {
+    ok = false;
+  }
+  document.body.removeChild(ta);
+
+  if (ok) {
+    toast('已复制');
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      toast('已复制');
+    }, function () {
+      toast('复制失败');
+    });
+    return;
+  }
+
+  toast('复制失败');
+}
+
+function reloadAll() {
+  configured = readConfig();
+  selected = new Set(configured);
+  clearDirty();
+  // 如果之前已经加载过系统应用，刷新时保持包含系统应用，避免已选系统项从列表消失。
+  loadApps(showSystem || systemLoaded);
+  refreshStatus();
+}
+
+function bind() {
+  document.getElementById('refresh').addEventListener('click', reloadAll);
+  document.getElementById('save').addEventListener('click', saveAndApply);
+  document.getElementById('reapply').addEventListener('click', applyOnly);
+  document.getElementById('verify').addEventListener('click', verify);
+  document.getElementById('copyOutput').addEventListener('click', copyOutput);
+  document.getElementById('appList').addEventListener('change', onAppListChange);
+  document.getElementById('manual').addEventListener('input', onManualInput);
+  document.getElementById('pinSelected').addEventListener('change', onPinChange);
+  document.getElementById('showSystem').addEventListener('change', onSystemChange);
+  document.getElementById('search').addEventListener('input', applySearchFilter);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  if (!hasKsu()) {
+    setOutput('请在 KernelSU 管理器的模块 WebUI 中打开此页面。');
+    return;
+  }
+  try {
+    const info = JSON.parse(ksu.moduleInfo());
+    if (info && info.moduleDir) moduleDir = info.moduleDir;
+  } catch (e) {
+    // 保持默认路径
+  }
+  try {
+    pinSelected = localStorage.getItem('pinSelected') !== '0';
+  } catch (e) {
+    pinSelected = true;
+  }
+  try {
+    showSystem = localStorage.getItem('showSystem') === '1';
+  } catch (e) {
+    showSystem = false;
+  }
+
+  const pin = document.getElementById('pinSelected');
+  if (pin) pin.checked = pinSelected;
+  const sys = document.getElementById('showSystem');
+  if (sys) sys.checked = showSystem;
+  const hint = document.getElementById('systemHint');
+  if (hint) hint.style.display = showSystem ? '' : 'none';
+
+  bind();
+  reloadAll();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# build artifacts
+.build/
+dist/
+
+# Android / Java
+*.apk
+*.idsig
+*.keystore
+*.jks
+*.class
+
+# packaged module
+*.zip
+
+# runtime state
+module/uids.state
+module/apply.log
+module/*.log
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

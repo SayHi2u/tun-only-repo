@@ -1,0 +1,6 @@
+id=tun-only-ksu
+name=Tun Only (WebUI)
+version=1.8
+versionCode=9
+author=codewhale
+description=Force selected apps to use v2rayNG tun0 only; WebUI with system-app toggle, auto-pin, dynamic package selection, and verification.
